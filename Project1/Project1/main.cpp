@@ -1,145 +1,21 @@
 #include <iostream>
-#include <cmath>
+#include<thread>
+#include<chrono>
 #include<string>
-#include<fstream>
-class Calculator {
-public:
-	std::string arr[10];
-	int front = -1;
-	int rear = -1;
-	int n = 10;
-	
-	void encrypt(std::string data){
-		int key = 6;
-		
-		for (int i = 0;data[i]!='\0'; i++) {
-			data[i] += key;
-		}
-		fileWrite(data);
-	}
-	std::string decrypt(std::string data) {
-		int key = 6;
-		for (int i = 0; data[i] != '\0'; i++) {
-			data[i] -= key;
-		}
-		return data;
-	}
-	void fileWrite(std::string value) {
-		std::ofstream file("C:/Users/Administrator/Desktop/file.txt",std::ios::app);
-		
-		file << value  << std::endl;
-		file.close();
-	}
-	void fileRead() {
-		std::ifstream file("C:/Users/Administrator/Desktop/file.txt");
-		std::string fileLines;
-		//int lineCount = 0;
-		while (getline(file, fileLines)) {
-			std::cout << decrypt(fileLines) << std::endl;
-			/*lineCount++;
-
-			if (lineCount >= 5) {
-				std::cout << "More Items" << std::endl;
-				std::string input;
-				getline(std::cin, input);
-				if (input == "q" || input == "Q") {
-					break;
-				}
-			}*/
-		}
-		file.close();
-	}
-	void eraseData() {
-		std::ofstream file("C:/Users/Administrator/Desktop/file.txt", std::ios::trunc);
-		file.close();
-	}
-	void displayFromFile() {
-		std::cout << "Displaying from file" << std::endl;
-		fileRead();
-	}
-	void insert(std::string num){
-		encrypt(num);
-		if ((front == 0 && rear == n - 1) || (front == rear + 1)) {
-			rear = front;
-			if (front == n - 1) {
-				front = 0;
-			}
-			else {
-				front += 1;
-			}
-			arr[rear] = num; 
-			
-			return;
-		}
-		if (front == -1) {
-			front = 0;
-			rear = 0;
-		}
-		else {
-			rear += 1;
-		}
-		arr[rear] = num;
-		
-	}
-	void display() {
-		int f = front, r = rear;
-		if (front == -1) {
-			std::cout << "There is no history" << std::endl;
-			return;
-		}
-		std::cout << "History" << std::endl;
-		if (f <= r) {
-			while (f <= r) {
-				std::cout << arr[f] << std::endl;
-				f++;
-			}
-		}
-		else {
-			while (f <= n - 1) {
-				std::cout << arr[f] << std::endl;
-				f++;
-			}
-			f = 0;
-			while (f <= r) {
-				std::cout << arr[f] << std::endl;
-				f++;
-			}
-		}
-	}
-
-	int add(int num1, int num2) {
-		insert(std::to_string(num1) +"\+" + std::to_string(num2) + '='+std::to_string(num1 + num2));
-		return num1 + num2;
-	}
-	int sub(int num1, int num2) {
-		insert(std::to_string(num1) + "-" + std::to_string(num2) + '=' + std::to_string( std::abs(num1 - num2)));
-		return std::abs(num1 - num2);
-	}
-	int multi(int num1, int num2) {
-		insert(std::to_string(num1) + "*" + std::to_string(num2) + '=' + std::to_string(num1 * num2));
-		return num1 * num2;
-	}
-	int div(int num1, int num2) {
-		insert(std::to_string( num1) + "/" + std::to_string(num2) + '=' + std::to_string(num1 / num2));
-		return num1 / num2;
-	}
-	int rem(int num1, int num2) {
-		insert(std::to_string( num1 )+ "%" + std::to_string(num2) + '=' + std::to_string(num1 % num2));
-		return num1 % num2;
-	}
-	int squareRoot(double num) {
-		insert(std::to_string(num) + "Square root =" + std::to_string(std::sqrt(num)));
-		return std::sqrt(num);
-	}
-	
-};
-
+#include "calculator.h"
+#include "cqueue.h"
+#include "filehandling.h"
 
 int main() {
 	
+	CircularQueue sharedQueue;
+	FileHandling fileHandling(&sharedQueue);
+	Calculator calculator(&sharedQueue);
+
+	std::thread fileWriterThread(&FileHandling::fileWriterThreadFunc, &fileHandling);
 	bool value = true;
 	while (value) {
-		Calculator calculator;
+		
 		bool session = true;
 		std::cout << "Enter the number you want to calculate:";
 		double n1;
@@ -208,20 +84,17 @@ int main() {
 				std::cout << n1;
 				break;
 			case 7:
-				//calculator.display();
-				calculator.displayFromFile();
+				sharedQueue.displayHistory();
+				
 				break;
 
 			case 8:
 				session = false;
 				break;
-
-
-
 			case 9:
 				session = false;
 				value = false;
-				calculator.eraseData();
+				fileHandling.fileErase();
 				break;
 
 			default:
@@ -229,6 +102,8 @@ int main() {
 			}
 		}
 	}
+	stopThread = true;
+	fileWriterThread.join();
 
 	return 0;
 }
